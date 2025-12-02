@@ -17,7 +17,7 @@ https://github.com/user-attachments/assets/09981c04-fb82-4b60-89f9-cd17f7a2167e
 
 ### Log Viewer (Desktop - PySide6)
 
-https://github.com/user-attachments/assets/4012f487-3bd7-423c-b386-9eaaa859b4bb
+https://github.com/user-attachments/assets/d8e5cc57-af60-488e-ab88-fb139f772cc9
 
 **機能:**
 - センサーデータの時系列グラフ表示（PyQtGraph）
