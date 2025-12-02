@@ -6,7 +6,7 @@ iPhoneのモーションセンサー（加速度計、ジャイロスコープ�
 
 ### Sensor Logger (iPhone - Pythonista3)
 
-https://github.com/user-attachments/assets/09981c04-fb82-4b60-89f9-cd17f7a2167e
+https://github.com/user-attachments/assets/8bcaa9ff-bb84-4976-832b-16496f7f16e1
 
 **機能:**
 - 加速度・ジャイロ・姿勢・磁場をリアルタイム記録
@@ -17,7 +17,7 @@ https://github.com/user-attachments/assets/09981c04-fb82-4b60-89f9-cd17f7a2167e
 
 ### Log Viewer (Desktop - PySide6)
 
-https://github.com/user-attachments/assets/d8e5cc57-af60-488e-ab88-fb139f772cc9
+https://github.com/user-attachments/assets/036c52fd-8439-4fb0-b0da-9384105489ef
 
 **機能:**
 - センサーデータの時系列グラフ表示（PyQtGraph）
