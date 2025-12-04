@@ -11,7 +11,7 @@ https://github.com/user-attachments/assets/8bcaa9ff-bb84-4976-832b-16496f7f16e1
 **機能:**
 - 加速度・ジャイロ・姿勢・磁場をリアルタイム記録
 - GPS位置・速度・精度をトラッキング
-- 国土地理院地図上でリアルタイム位置表示
+- OpenStreetMap上でリアルタイム位置表示
 - デッドレコニング（GPS途絶時の推測航法）
 - JSONフォーマットでログ出力
 
@@ -132,8 +132,8 @@ python log_viewer.py
 GPS信号が途絶した場合（トンネル内、屋内など）、IMUデータ（加速度計・ジャイロスコープ）を積分して位置を推定する機能を搭載しています。
 
 ### Map Integration
-- **記録時**: 国土地理院淡色地図でリアルタイム位置表示
-- **再生時**: GPS軌跡（青）とデッドレコニング軌跡（紫）を重ねて表示
+- **記録時（iOS）**: OpenStreetMapでリアルタイム位置表示
+- **再生時（Desktop）**: 国土地理院淡色地図上でGPS軌跡（青）とデッドレコニング軌跡（紫）を重ねて表示
 
 ### Barometric Altimeter (未実装)
 iPhoneには気圧高度計（CMAltimeter）が搭載されていますが、本アプリでは使用していません。Pythonista3環境ではCMAltimeterのコールバック処理が安定せず、アプリのクラッシュや不正確なデータ取得が発生するためです。将来的にネイティブアプリとして実装する際には対応を検討します。
@@ -144,7 +144,8 @@ MIT License
 
 ## Acknowledgments
 
-- [国土地理院](https://maps.gsi.go.jp/) - 地図タイル提供
+- [OpenStreetMap](https://www.openstreetmap.org/) - 地図タイル提供（iOS）
+- [国土地理院](https://maps.gsi.go.jp/) - 地図タイル提供（Desktop）
 - [Leaflet.js](https://leafletjs.com/) - 地図ライブラリ
 - [PyQtGraph](https://www.pyqtgraph.org/) - グラフ描画ライブラリ
 - [Pythonista 3](http://omz-software.com/pythonista/) - iOS Python IDE

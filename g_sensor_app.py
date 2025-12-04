@@ -6,7 +6,7 @@ Sensor Logger - Pythonista3用センサーログ記録アプリ
 - モーションセンサー（加速度、ジャイロ、姿勢、磁場）
 - GPS（位置、速度、精度）
 - デッドレコニング（GPS途絶時の推測航法）
-- 国土地理院地図（淡色）表示
+- OpenStreetMap表示
 - JSONログ記録
 
 対応: iPhone 17 Pro
@@ -294,9 +294,9 @@ MAP_HTML = '''
             zoomControl: false
         }).setView([35.6812, 139.7671], 16);
 
-        L.tileLayer.cached('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
-            attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
-            maxZoom: 18
+        L.tileLayer.cached('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 19
         }).addTo(map);
 
         // 初期位置設定（Python側から呼び出し）
