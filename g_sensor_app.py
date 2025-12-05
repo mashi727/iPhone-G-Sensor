@@ -1187,6 +1187,23 @@ class SensorView(ui.View):
         self._last_update_time = time.time()
         self._schedule_update()
 
+        # 起動時の初期位置設定（WebViewロード完了を待って実行）
+        def set_initial_location():
+            if not self._map_initialized:
+                try:
+                    loc = location.get_location()
+                    if loc:
+                        lat = loc.get('latitude')
+                        lon = loc.get('longitude')
+                        if lat is not None and lon is not None:
+                            js = f'setInitialPosition({lat}, {lon});'
+                            self.map_view.evaluate_javascript(js)
+                            self._map_initialized = True
+                except Exception:
+                    pass
+
+        ui.delay(set_initial_location, 2.5)
+
     def _schedule_update(self):
         """定期更新のスケジューリング"""
         ui.delay(self._update_display, self.update_interval)

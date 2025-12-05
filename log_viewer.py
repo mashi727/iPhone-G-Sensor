@@ -125,12 +125,12 @@ MAP_HTML = '''
             })
         };
 
-        var currentTileLayer = tileLayers.gsi;
+        var currentTileLayer = tileLayers.google_map;
         currentTileLayer.addTo(map);
 
         function setMapType(mapType) {
             map.removeLayer(currentTileLayer);
-            currentTileLayer = tileLayers[mapType] || tileLayers.gsi;
+            currentTileLayer = tileLayers[mapType] || tileLayers.google_map;
             currentTileLayer.addTo(map);
         }
 
@@ -443,12 +443,12 @@ INTEGRATED_MAP_HTML = '''
             })
         };
 
-        var currentTileLayer = tileLayers.gsi;
+        var currentTileLayer = tileLayers.google_map;
         currentTileLayer.addTo(map);
 
         function setMapType(mapType) {
             map.removeLayer(currentTileLayer);
-            currentTileLayer = tileLayers[mapType] || tileLayers.gsi;
+            currentTileLayer = tileLayers[mapType] || tileLayers.google_map;
             currentTileLayer.addTo(map);
         }
 
@@ -1463,13 +1463,13 @@ End: {self.records[-1].get('datetime', 'N/A')[:19]}"""
 
     def _setup_map_combo(self, combo):
         """地図選択コンボボックスをセットアップ"""
-        combo.addItem('国土地理院（淡色）', 'gsi')
-        combo.addItem('国土地理院（標準）', 'gsi_std')
-        combo.addItem('国土地理院（写真）', 'gsi_photo')
-        combo.addItem('OpenStreetMap', 'osm')
         combo.addItem('Google Maps', 'google_map')
         combo.addItem('Google 衛星', 'google_satellite')
         combo.addItem('Google ハイブリッド', 'google_hybrid')
+        combo.addItem('OpenStreetMap', 'osm')
+        combo.addItem('国土地理院（淡色）', 'gsi')
+        combo.addItem('国土地理院（標準）', 'gsi_std')
+        combo.addItem('国土地理院（写真）', 'gsi_photo')
 
     def _change_map_type(self, map_view, combo):
         """地図タイプを変更"""
