@@ -469,7 +469,7 @@ class DataLogger:
             'session_start_unix': time.time(),
             'device': device_info.get('model', 'iPhone'),
             'device_info': device_info,
-            'app_version': '1.1.0',
+            'app_version': '1.2.0',
             'update_interval_ms': 100,
             'sensors_available': {
                 'altimeter': ALTIMETER_AVAILABLE,
@@ -774,7 +774,7 @@ class GPSINSFusion:
             'lat': self.current_lat,
             'lon': self.current_lon,
             'speed': speed,
-            'heading': math.degrees(self.current_heading if not use_memory_track else self.memory_heading),
+            'heading': math.degrees(self.current_heading if not use_memory_track else self.memory_heading) % 360.0,
             'mode': 'memory_track' if use_memory_track else 'ins',
             'memory_elapsed': memory_elapsed if use_memory_track else 0.0
         }
@@ -899,7 +899,7 @@ class DeadReckoning:
             'lat': self.current_lat,
             'lon': self.current_lon,
             'speed': speed,
-            'heading': math.degrees(self.current_heading),
+            'heading': math.degrees(self.current_heading) % 360.0,
             'elapsed': time.time() - self.dr_start_time,
             # デバッグ用の計算値
             'debug': {
@@ -917,6 +917,9 @@ class DeadReckoning:
 class SensorView(ui.View):
     """センサー値を表示するメインビュー"""
 
+    # 更新間隔(0.1s)に対してこれ以上空いたら、アプリの一時停止からの復帰とみなす
+    RESUME_GAP_SEC = 2.0
+
     def __init__(self):
         super().__init__()
         self.name = 'Sensor Logger'
@@ -928,6 +931,7 @@ class SensorView(ui.View):
         self._map_ready = False
         self._start_time = time.time()
         self._last_gps_timestamp = None
+        self._stale_gps_timestamp = None  # 復帰直後、停止前から残っている測位の時刻
         self._gps_timeout = 5.0
 
         self.dead_reckoning = DeadReckoning()
@@ -1299,6 +1303,19 @@ class SensorView(ui.View):
         dt = now - self._last_update_time
         self._last_update_time = now
 
+        # 一時停止（画面ロック・バックグラウンド移行など）からの復帰。
+        # 停止中の経過時間を1ステップとして積分すると、DR/Fusionが停止中の移動を
+        # 一度に外挿してしまう。またGPSの最終更新時刻が停止前のままなので、
+        # 復帰直後に必ずタイムアウト（No Signal）と誤判定される。
+        # そこで積分には通常の更新間隔を使い、GPSのタイムアウト計測を復帰時点から始め直す。
+        resumed_after = None
+        if dt > self.RESUME_GAP_SEC:
+            resumed_after = dt
+            dt = self.update_interval
+            self._prev_attitude = None  # 停止をまたいだ姿勢差分は角速度ではない
+            self._last_gps_update_time = now
+            self._stale_gps_timestamp = self._last_gps_timestamp
+
         # センサーデータ取得
         gravity = motion.get_gravity()
         user_accel = motion.get_user_acceleration()
@@ -1312,6 +1329,7 @@ class SensorView(ui.View):
         # ログ用データ構造（拡張版）
         log_record = {
             'dt': dt,
+            'resumed_after_sec': resumed_after,  # 一時停止からの復帰時のみ、停止していた秒数
             'sensors': {
                 'gravity': None,
                 'user_acceleration': None,
@@ -1473,7 +1491,14 @@ class SensorView(ui.View):
             log_record['gps']['status'] = gps_status
             log_record['gps']['no_signal'] = no_signal
 
-            if not no_signal:
+            # 復帰直後は、新しい測位が届くまで停止前の位置を航法に使わない
+            stale = (self._stale_gps_timestamp is not None and
+                     timestamp == self._stale_gps_timestamp)
+            if not stale:
+                self._stale_gps_timestamp = None
+            log_record['gps']['stale'] = stale
+
+            if not no_signal and not stale:
                 self._dr_mode = False
                 self.dead_reckoning.update_gps(lat, lon, speed, course, timestamp)
 
