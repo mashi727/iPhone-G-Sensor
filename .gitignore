@@ -32,3 +32,6 @@ env/
 # Logs and temp files
 *.log
 *.tmp
+
+# Sensor log files placed outside data/
+sensor_log_*.json
