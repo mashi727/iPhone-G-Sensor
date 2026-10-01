@@ -21,10 +21,14 @@ https://github.com/user-attachments/assets/036c52fd-8439-4fb0-b0da-9384105489ef
 
 **機能:**
 - センサーデータの時系列グラフ表示（PyQtGraph）
-- 国土地理院地図上での軌跡表示（Leaflet.js）
-- GPS軌跡とデッドレコニング軌跡の比較表示
-- インタラクティブな時間軸操作
+- 地図上での軌跡表示（Leaflet.js。OpenStreetMap / 国土地理院の淡色・標準・写真を切り替え）
+- GPS 精度で色分けした航跡と、デッドレコニング・GPS/INS 融合の比較表示
+- 高度断面図（国内のログでは国土地理院の標高タイルによる地形断面を重ねる）
+- GPS 有効率・記録欠落・DR 作動の要約（間引き前の全レコードで集計）
+- 大容量ログのストリーミング読み込みと間引き表示
 - ファイルブラウザによるログ選択
+
+※ デモ動画は旧版のものです（地図は国土地理院の淡色地図）。
 
 ## Case Study: 旅客機の機内で記録したログ
 
@@ -114,22 +118,30 @@ flowchart TB
             Motion["🎯 Motion API<br/>Accel / Gyro<br/>Attitude / Magnet"]
             Location["📍 Location API<br/>GPS / Speed<br/>Heading / Accuracy"]
         end
-        DR["🧭 Dead Reckoning<br/>IMU Integration<br/>Position Estimation"]
+        DR["🧭 Dead Reckoning<br/>GPS Outage Fallback"]
+        Fusion["🔀 GPS/INS Fusion<br/>Integrated Track"]
         Export["💾 JSON Log Export<br/>(10Hz sampling)"]
 
+        Motion --> DR
+        Location --> DR
+        Motion --> Fusion
+        Location --> Fusion
         Motion --> Export
         Location --> Export
         DR --> Export
+        Fusion --> Export
     end
 
     Export -->|"File Transfer"| Import
 
     subgraph Desktop["🖥️ Desktop Viewer (PySide6)"]
-        Import["📂 File Browser<br/>Log Selection"]
+        Import["📂 File Browser<br/>Streaming Load"]
+        Summary["📋 Log Summary<br/>GPS Availability / Gaps / DR"]
         subgraph Visualization["Visualization"]
-            Graph["📈 PyQtGraph<br/>Time Series Plots"]
-            Map["🗺️ Leaflet.js<br/>GSI Map / Trajectory"]
+            Graph["📈 PyQtGraph<br/>Time Series / Elevation Profile"]
+            Map["🗺️ Leaflet.js<br/>OSM / GSI Tiles"]
         end
+        Import --> Summary
         Import --> Graph
         Import --> Map
     end
@@ -144,6 +156,9 @@ flowchart TB
 ### Log Viewer (Desktop)
 - Python 3.10+
 - Dependencies listed in `requirements.txt`
+  - PySide6（QtWebEngine を含む）、pyqtgraph、numpy
+  - ijson：大容量ログ（20 MB 超）のストリーミング読み込み
+  - Pillow：国土地理院の標高タイルの読み取り（地形断面）
 
 ## Installation
 
@@ -151,14 +166,14 @@ flowchart TB
 
 ```bash
 # Clone repository
-git clone https://github.com/YOUR_USERNAME/iPhone-G-Sensor.git
+git clone https://github.com/mashi727/iPhone-G-Sensor.git
 cd iPhone-G-Sensor
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run viewer
-python log_viewer.py
+# Run viewer (引数で開くフォルダを指定。省略時はカレントフォルダ)
+python log_viewer.py data/
 ```
 
 ### Sensor Logger Setup
@@ -169,62 +184,87 @@ python log_viewer.py
 
 ## Sensor Data Format
 
-ログファイルはJSON形式で、以下のデータを含みます：
+ログファイルは JSON 形式です。1 レコードが 1 回の更新（約 100 ms）に対応します。値は例です。
 
 ```json
 {
-  "device_info": {
-    "model": "iPhone",
-    "system_version": "18.x"
+  "metadata": {
+    "session_start": "2026-01-01T12:00:00.000000",
+    "app_version": "1.2.0",
+    "update_interval_ms": 100,
+    "device_info": {"model": "iPhone", "system_name": "iOS", "system_version": "26.x"},
+    "sensors_available": {"altimeter": false, "sleep_control": true, "direct_gyro": false}
   },
+  "record_count": 1,
   "records": [
     {
-      "timestamp": 1701234567.123,
-      "motion": {
-        "acceleration": {"x": 0.01, "y": -0.02, "z": -1.0},
-        "gravity": {"x": 0.0, "y": 0.0, "z": -1.0},
-        "gyroscope": {"x": 0.001, "y": 0.002, "z": 0.0},
-        "attitude": {"roll": 0.0, "pitch": 0.0, "yaw": 0.0},
-        "magnetic_field": {"x": 25.0, "y": -10.0, "z": 40.0}
+      "timestamp": 1767268800.0,
+      "datetime": "2026-01-01T12:00:00.000000",
+      "sequence": 0,
+      "dt": 0.1,
+      "resumed_after_sec": null,
+      "sensors": {
+        "gravity":           {"x": 0.0, "y": 0.0, "z": -1.0, "magnitude": 1.0},
+        "user_acceleration": {"x": 0.01, "y": -0.02, "z": 0.0, "magnitude": 0.022},
+        "raw_acceleration":  {"x": 0.01, "y": -0.02, "z": -1.0, "magnitude": 1.0},
+        "attitude": {"roll_rad": 0.0, "pitch_rad": 0.0, "yaw_rad": 0.0,
+                     "roll_deg": 0.0, "pitch_deg": 0.0, "yaw_deg": 0.0},
+        "magnetic_field": {"x": 25.0, "y": -10.0, "z": 40.0, "magnitude": 48.2, "accuracy": 2},
+        "gyro_calculated": {"x": 0.0, "y": 0.0, "z": 0.0},
+        "barometer": null
       },
-      "location": {
-        "latitude": 35.6812,
-        "longitude": 139.7671,
-        "altitude": 40.0,
-        "speed": 1.5,
-        "course": 90.0,
-        "horizontal_accuracy": 5.0
+      "gps": {
+        "raw": {
+          "latitude": 35.6812, "longitude": 139.7671, "altitude": 40.0,
+          "speed": 1.5, "speed_clamped": 1.5, "course": 90.0,
+          "horizontal_accuracy": 5.0, "vertical_accuracy": 3.0, "timestamp": 1767268800.0
+        },
+        "status": "good",
+        "no_signal": false,
+        "stale": false
       },
-      "dead_reckoning": {
-        "latitude": 35.6812,
-        "longitude": 139.7671,
-        "confidence": 0.95
-      }
+      "dead_reckoning": {"active": false, "result": null},
+      "gps_ins_fusion": {"latitude": 35.6812, "longitude": 139.7671, "speed": 1.5,
+                         "heading": 90.0, "mode": "ins", "memory_elapsed": 0.0},
+      "integrated_track": {"latitude": 35.6812, "longitude": 139.7671,
+                           "source": "gps_good", "accuracy": 5.0}
     }
   ]
 }
 ```
 
+| キー | 内容 |
+| --- | --- |
+| `sensors.gravity` / `user_acceleration` | 端末座標系の重力方向と、重力を除いた加速度（G） |
+| `sensors.gyro_calculated` | 姿勢角の差分から求めた角速度（rad/s）。Pythonista3 ではジャイロを直接取得できないため |
+| `gps.no_signal` | GPS の更新が 5 秒以上途絶えた状態 |
+| `gps.stale` | アプリ再開直後に、停止前から残っている測位であることを示す（v1.2.0 以降） |
+| `resumed_after_sec` | アプリの一時停止から再開した最初のレコードでのみ、停止していた秒数（v1.2.0 以降） |
+| `dead_reckoning.result` | 作動中のみ。推測位置・速度・方位（0–360°）と、最終 GPS 測位点 |
+| `gps_ins_fusion.mode` | `ins`（GPS と IMU の融合）または `memory_track`（GPS 途絶直後に直前の速度・方位を保持） |
+
+GPS の生データ（`gps.raw`）には、このほか磁気方位・真方位・各精度などの項目が含まれます。
+
 ## Features
 
 ### Dead Reckoning
-GPS信号が途絶した場合（トンネル内、屋内など）、IMUデータ（加速度計・ジャイロスコープ）を積分して位置を推定する機能を搭載しています。
+GPS 信号が途絶した場合（トンネル内、屋内など）、IMU データ（加速度計・ジャイロスコープ）を積分して位置を推定します。Viewer は、DR が実際の GPS 途絶で作動したのか、アプリの一時停止からの再開で作動したのかを区別して表示します（v1.1.0 のログでは後者が記録されます）。
 
 ### Map Integration
-- **記録時（iOS）**: OpenStreetMapでリアルタイム位置表示
-- **再生時（Desktop）**: 国土地理院淡色地図上でGPS軌跡（青）とデッドレコニング軌跡（紫）を重ねて表示
+- **記録時（iOS）**: OpenStreetMap でリアルタイム位置表示
+- **再生時（Desktop）**: OpenStreetMap（既定）または国土地理院の淡色・標準・写真地図の上に、GPS 精度で色分けした航跡と、GPS 途絶時のデッドレコニング軌跡を重ねて表示
 
 ### Barometric Altimeter (未実装)
 iPhoneには気圧高度計（CMAltimeter）が搭載されていますが、本アプリでは使用していません。Pythonista3環境ではCMAltimeterのコールバック処理が安定せず、アプリのクラッシュや不正確なデータ取得が発生するためです。将来的にネイティブアプリとして実装する際には対応を検討します。
 
 ## License
 
-MIT License
+[MIT License](LICENSE)
 
 ## Acknowledgments
 
-- [OpenStreetMap](https://www.openstreetmap.org/) - 地図タイル提供（iOS）
-- [国土地理院](https://maps.gsi.go.jp/) - 地図タイル提供（Desktop）
+- [OpenStreetMap](https://www.openstreetmap.org/copyright) - 地図データ・タイル（© OpenStreetMap contributors、iOS / Desktop）
+- [国土地理院](https://maps.gsi.go.jp/development/ichiran.html) - 地図タイル・標高タイル（Desktop）
 - [Leaflet.js](https://leafletjs.com/) - 地図ライブラリ
 - [PyQtGraph](https://www.pyqtgraph.org/) - グラフ描画ライブラリ
 - [Pythonista 3](http://omz-software.com/pythonista/) - iOS Python IDE
