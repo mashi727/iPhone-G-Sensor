@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QUrl, QDir, QThread, Signal
 from PySide6.QtGui import QAction, QShortcut, QKeySequence
 from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebEngineCore import QWebEngineProfile
 from PySide6.QtWebChannel import QWebChannel
 
 import pyqtgraph as pg
@@ -43,6 +44,9 @@ MAX_DISPLAY_POINTS = 2000  # 表示する最大ポイント数
 MAP_MAX_POINTS = 1000      # 地図上の最大ポイント数
 MAX_LOAD_RECORDS = 10000   # 読み込み時の最大レコード数（大きなファイル対策）
 STREAMING_THRESHOLD_MB = 20  # このサイズ以上でストリーミング読み込みを使用
+
+# 地図タイルの取得元にアプリを識別させる（OpenStreetMap のタイル利用ポリシーが求める）
+APP_USER_AGENT_SUFFIX = 'SensorLogViewer (+https://github.com/mashi727/iPhone-G-Sensor)'
 
 
 def decimate_data(data, max_points=MAX_DISPLAY_POINTS):
@@ -205,30 +209,18 @@ MAP_HTML = '''
                 attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
                 maxZoom: 18
             }),
-            osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
                 maxZoom: 19
-            }),
-            google_map: L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-                attribution: '&copy; Google Maps',
-                maxZoom: 20
-            }),
-            google_satellite: L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-                attribution: '&copy; Google Maps',
-                maxZoom: 20
-            }),
-            google_hybrid: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-                attribution: '&copy; Google Maps',
-                maxZoom: 20
             })
         };
 
-        var currentTileLayer = tileLayers.google_map;
+        var currentTileLayer = tileLayers.osm;
         currentTileLayer.addTo(map);
 
         function setMapType(mapType) {
             map.removeLayer(currentTileLayer);
-            currentTileLayer = tileLayers[mapType] || tileLayers.google_map;
+            currentTileLayer = tileLayers[mapType] || tileLayers.osm;
             currentTileLayer.addTo(map);
         }
 
@@ -584,30 +576,18 @@ INTEGRATED_MAP_HTML = '''
                 attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
                 maxZoom: 18
             }),
-            osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
                 maxZoom: 19
-            }),
-            google_map: L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-                attribution: '&copy; Google Maps',
-                maxZoom: 20
-            }),
-            google_satellite: L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-                attribution: '&copy; Google Maps',
-                maxZoom: 20
-            }),
-            google_hybrid: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-                attribution: '&copy; Google Maps',
-                maxZoom: 20
             })
         };
 
-        var currentTileLayer = tileLayers.google_map;
+        var currentTileLayer = tileLayers.osm;
         currentTileLayer.addTo(map);
 
         function setMapType(mapType) {
             map.removeLayer(currentTileLayer);
-            currentTileLayer = tileLayers[mapType] || tileLayers.google_map;
+            currentTileLayer = tileLayers[mapType] || tileLayers.osm;
             currentTileLayer.addTo(map);
         }
 
@@ -1408,7 +1388,7 @@ class GSIElevationAPI:
         for base_url in self.DEM_URLS:
             url = base_url.format(z=zoom, x=x, y=y)
             try:
-                req = urllib.request.Request(url, headers={'User-Agent': 'SensorLogViewer/1.0'})
+                req = urllib.request.Request(url, headers={'User-Agent': APP_USER_AGENT_SUFFIX})
                 with urllib.request.urlopen(req, timeout=5) as response:
                     from PIL import Image
                     import io
@@ -1930,6 +1910,10 @@ class SensorLogViewer(QMainWindow):
         super().__init__()
         self.setWindowTitle('Sensor Logger Viewer')
         self.setGeometry(100, 100, 1600, 900)
+
+        profile = QWebEngineProfile.defaultProfile()
+        if APP_USER_AGENT_SUFFIX not in profile.httpUserAgent():
+            profile.setHttpUserAgent(f'{profile.httpUserAgent()} {APP_USER_AGENT_SUFFIX}')
 
         self.log_data = None
         self.records = []
@@ -2590,9 +2574,6 @@ End: {self.records[-1].get('datetime', 'N/A')[:19]}"""
 
     def _setup_map_combo(self, combo):
         """地図選択コンボボックスをセットアップ"""
-        combo.addItem('Google Maps', 'google_map')
-        combo.addItem('Google 衛星', 'google_satellite')
-        combo.addItem('Google ハイブリッド', 'google_hybrid')
         combo.addItem('OpenStreetMap', 'osm')
         combo.addItem('国土地理院（淡色）', 'gsi')
         combo.addItem('国土地理院（標準）', 'gsi_std')
