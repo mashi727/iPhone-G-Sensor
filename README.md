@@ -2,6 +2,14 @@
 
 iPhoneのモーションセンサー（加速度計、ジャイロスコープ、磁力計）とGPSを使用した高精度センサーログ記録・可視化システム
 
+## 考え方
+
+何が問題で、それをどう解いているかを PAD（問題分析図）で示します。各段の詳細は下の各節を参照してください。
+
+<img src="docs/pad/concept.png" alt="考え方の PAD。移動中のセンサーを記録しあとで検証するため、iPhone でセンサーと GPS を同じログに記録し、GPS 途絶時は推測航法で補い、机上のビューアで要約・グラフ・地図により照合する" width="100%">
+
+<sub>図の元は [`docs/pad/concept.spd`](docs/pad/concept.spd)。[padkit](https://github.com/mashi727/padkit) で検査・描画しています。</sub>
+
 ## Demo
 
 ### Sensor Logger (iPhone - Pythonista3)
