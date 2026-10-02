@@ -1,5 +1,5 @@
 移動中のセンサーを@記録し、あとで検証する
-	:comment 問題：GPS と IMU を照合しにくい
+	:comment 課題：GPS と IMU を照合しにくい
 	:comment 方針：同じログに記録し机上で見る
 	iPhone で記録する
 		人が Pythonista3 で@g_sensor_app.py を実行する
